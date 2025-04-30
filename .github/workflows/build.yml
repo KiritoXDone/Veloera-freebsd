@@ -39,12 +39,10 @@ jobs:
             wget https://dl.google.com/go/go1.22.1.freebsd-amd64.tar.gz && tar -C /usr/local -xzf go1.22.1.freebsd-amd64.tar.gz && rm go1.22.1.freebsd-amd64.tar.gz
             ln -s /usr/local/go/bin/go /usr/local/bin/go
           run: |
-            # First, set the correct safe directory path
             git config --global --add safe.directory /home/runner/work/Veloera-freebsd/Veloera-freebsd/Veloera
             cd Veloera
             go mod download
-            # Add error handling and verbose output for debugging
-            go build -v -ldflags "-s -w -X 'Veloera/common.Version=$(git describe --tags)' -extldflags '-static'" -o veloera || (echo "Build failed" && exit 1)
+            go build -ldflags "-s -w -X 'veloera/common.Version=$(git describe --tags)' -extldflags '-static'" -o veloera || (echo "Build failed" && exit 1)
 
       - name: Upload artifact
         uses: actions/upload-artifact@main
