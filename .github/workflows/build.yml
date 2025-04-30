@@ -26,7 +26,7 @@ jobs:
         run: |
           cd Veloera/web
           npm install
-          REACT_APP_VERSION=$(git describe --tags) npm run build
+          VITE_REACT_APP_VERSION=$(git describe --tags) npm run build
           cd ../..
 
       - name: Build Backend
