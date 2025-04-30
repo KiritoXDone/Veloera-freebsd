@@ -40,7 +40,7 @@ jobs:
             ln -s /usr/local/go/bin/go /usr/local/bin/go
           run: |
             # First, set the correct safe directory path
-            git config --global --add safe.directory /home/runner/work/new-api-freebsd/new-api-freebsd/Veloera
+            git config --global --add safe.directory /home/runner/work/Veloera-freebsd/Veloera-freebsd/Veloera
             cd Veloera
             go mod download
             # Add error handling and verbose output for debugging
