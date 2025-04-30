@@ -1,2 +1,2 @@
-# New-API-FreeBSD
-Automatically build New-API (FreeBSD version)
+# Veloera-FreeBSD
+Automatically build Veloera (FreeBSD version)
