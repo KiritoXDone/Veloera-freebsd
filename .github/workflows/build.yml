@@ -17,8 +17,9 @@ jobs:
 
       - name: Clone Repo
         run: |
-            export LATEST_APP=$(wget -qO- https://api.github.com/repos/Veloera/Veloera/tags | gawk -F '["v]' '/name/{print "v"$5;exit}')
-            git clone -b $LATEST_APP https://github.com/Veloera/Veloera
+            export LATEST_APP=$(wget -qO- https://api.github.com/repos/Veloera/Veloera/releases/latest | grep -oP '"tag_name":\s*"\K[^"]+')
+            echo "LATEST_VERSION=$LATEST_APP" >> $GITHUB_ENV
+            git clone --depth 1 -b $LATEST_APP https://github.com/Veloera/Veloera
 
       - name: Build Frontend
         env:
@@ -42,7 +43,7 @@ jobs:
             git config --global --add safe.directory /home/runner/work/Veloera-freebsd/Veloera-freebsd/Veloera
             cd Veloera
             go mod download
-            go build -ldflags "-s -w -X 'veloera/common.Version=$(git describe --tags)' -extldflags '-static'" -o veloera || (echo "Build failed" && exit 1)
+            go build -ldflags "-s -w -X 'veloera/common.Version=${{ env.LATEST_VERSION }}' -extldflags '-static'" -o veloera || (echo "Build failed" && exit 1)
 
       - name: Upload artifact
         uses: actions/upload-artifact@main
