@@ -54,7 +54,8 @@ jobs:
   
       - name: Generate release tag
         id: tag
-        run: echo "release_tag=$(wget -qO- https://api.github.com/repos/Veloera/Veloera/tags | gawk -F '["v]' '/name/{print "v"$5;exit}')" >> $GITHUB_OUTPUT
+        run: |
+          echo "release_tag=${{ env.LATEST_VERSION }}" >> $GITHUB_OUTPUT
 
       - name: Create release
         uses: softprops/action-gh-release@v1
