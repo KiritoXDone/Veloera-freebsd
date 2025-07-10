@@ -26,7 +26,7 @@ jobs:
           CI: ""
         run: |
           cd Veloera/web
-          npm install
+          npm install --legacy-peer-deps
           VITE_REACT_APP_VERSION=$(git describe --tags) npm run build
           cd ../..
 
