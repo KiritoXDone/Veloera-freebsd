@@ -6,31 +6,38 @@ on:
   workflow_dispatch:
 
 jobs:
-  tests:
+  check-and-tag:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: compare versions
+      
+      - name: Compare versions
+        id: compare
         run: |
-          export REMOTEVERSION=$(curl --location --silent --fail --show-error "https://api.github.com/repos/Veloera/Veloera/releases/latest" | grep -oP '"tag_name":\s*"\K[^"]+')
-          export LOCALVERSION=$(curl --location --silent --fail --show-error "https://api.github.com/repos/KiritoXDone/Veloera-freebsd/releases/latest" | grep -oP '"tag_name":\s*"\K[^"]+')
-          bash compare.sh
+          REMOTE_VERSION=$(curl --location --silent --fail --show-error "https://api.github.com/repos/Veloera/Veloera/releases/latest" | grep -oP '"tag_name":\s*"\K[^"]+')
+          echo "remote_version=${REMOTE_VERSION}" >> $GITHUB_OUTPUT
           
-      - name: Trigger release
-        if: ${{ env.SYNCED == 0 }}
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.PAT_TOKEN }}
-          script: |
-              await github.rest.actions.createWorkflowDispatch({
-              owner: 'KiritoXDone',
-              repo: 'Veloera-freebsd',
-              workflow_id: 'build.yml',
-              ref: 'main'
-              })
-              
+          LOCAL_VERSION=$(curl --location --silent --fail "https://api.github.com/repos/${{ github.repository }}/releases/latest" | grep -oP '"tag_name":\s*"\K[^"]+' || echo "none")
+          echo "local_version=${LOCAL_VERSION}" >> $GITHUB_OUTPUT
+
+          if [[ "$LOCAL_VERSION" == "$REMOTE_VERSION" ]]; then
+              echo "Versions are in sync."
+              echo "synced=true" >> $GITHUB_OUTPUT
+          else
+              echo "New version found: ${REMOTE_VERSION}"
+              echo "synced=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create and push new tag
+        if: steps.compare.outputs.synced == 'false'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git tag ${{ steps.compare.outputs.remote_version }}
+          git push origin ${{ steps.compare.outputs.remote_version }}
+          
       - name: Delete workflow runs
-        if: ${{ env.SYNCED == 1 }}
+        if: steps.compare.outputs.synced == 'true'
         uses: Mattraks/delete-workflow-runs@v2
         with:
           token: ${{ github.token }}
