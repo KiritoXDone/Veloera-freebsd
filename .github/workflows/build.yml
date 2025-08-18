@@ -43,8 +43,13 @@ jobs:
           CI: ""
         run: |
           cd Veloera/web
+<<<<<<< HEAD
           pnpm install
           VITE_REACT_APP_VERSION=${{ env.VERSION }} pnpm run build
+=======
+          npm install --legacy-peer-deps
+          VITE_REACT_APP_VERSION=$(git describe --tags) npm run build
+>>>>>>> d2301fe4393d7bef8d0e4e8526f9d7ce6356e5fe
           cd ../..
 
       - name: Build Backend
