@@ -1,81 +1,66 @@
 name: Build Veloera
 
-on:
-  push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
+on: workflow_dispatch
 
 jobs:
-  build-freebsd:
+  test:
     runs-on: ubuntu-latest
-    name: Build Veloera on FreeBSD
+    name: Build Veloera
     steps:
-      - name: Get version
-        id: get_version
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "VERSION=${{ github.event.inputs.tag_name }}" >> $GITHUB_ENV
-          else
-            echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
-          fi
-
-      - name: Clone Veloera Repo
-        uses: actions/checkout@v4
-        with:
-          repository: Veloera/Veloera
-          ref: ${{ env.VERSION }}
-          path: Veloera
-
+    
+      - uses: actions/checkout@v4
+    
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: 18
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-          run_install: false
-      
+      - name: Clone Repo
+        run: |
+            export LATEST_APP=$(wget -qO- https://api.github.com/repos/Veloera/Veloera/releases/latest | grep -oP '"tag_name":\s*"\K[^"]+')
+            echo "LATEST_VERSION=$LATEST_APP" >> $GITHUB_ENV
+            git clone --depth 1 -b $LATEST_APP https://github.com/Veloera/Veloera
       - name: Build Frontend
         env:
           CI: ""
         run: |
           cd Veloera/web
-          pnpm install
-          VITE_REACT_APP_VERSION=${{ env.VERSION }} pnpm run build
+          npm install --legacy-peer-deps
+          VITE_REACT_APP_VERSION=$(git describe --tags) npm run build
           cd ../..
-
       - name: Build Backend
         uses: vmactions/freebsd-vm@v1
         with:
           usesh: true
           release: 13.2
           prepare: |
-            pkg install -y wget git gcc
+            pkg install -y jq wget curl git gcc bash gawk gsed
             wget https://dl.google.com/go/go1.22.1.freebsd-amd64.tar.gz && tar -C /usr/local -xzf go1.22.1.freebsd-amd64.tar.gz && rm go1.22.1.freebsd-amd64.tar.gz
             ln -s /usr/local/go/bin/go /usr/local/bin/go
           run: |
+            git config --global --add safe.directory /home/runner/work/Veloera-freebsd/Veloera-freebsd/Veloera
             cd Veloera
             go mod download
-            go build -ldflags "-s -w -X 'veloera/common.Version=${{ env.VERSION }}' -extldflags '-static'" -o veloera
-
+            go build -ldflags "-s -w -X 'veloera/common.Version=${{ env.LATEST_VERSION }}' -extldflags '-static'" -o veloera || (echo "Build failed" && exit 1)
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@main
         with:
           name: veloera-freebsd
-          path: Veloera/veloera
-          retention-days: 1
+          path: |
+              Veloera/veloera
   
+      - name: Generate release tag
+        id: tag
+        run: |
+          echo "release_tag=${{ env.LATEST_VERSION }}" >> $GITHUB_OUTPUT
       - name: Create release
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.VERSION }}
-          files: Veloera/veloera
-          generate_release_notes: true
+          tag_name: ${{ env.LATEST_VERSION }}
+          files: |
+                Veloera/veloera
               
       - name: Delete workflow runs
         uses: Mattraks/delete-workflow-runs@v2
